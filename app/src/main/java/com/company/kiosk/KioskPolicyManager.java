@@ -1,5 +1,6 @@
 package com.company.kiosk;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.admin.DevicePolicyManager;
@@ -68,11 +69,13 @@ public final class KioskPolicyManager {
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 // HOME returns staff to the controlled launcher. SYSTEM_INFO shows
-                // connectivity and battery, while notifications/quick settings stay blocked.
+                // connectivity/battery and NOTIFICATIONS keeps WhatsApp alerts visible.
+                // Quick settings and Overview remain blocked.
                 manager.setLockTaskFeatures(
                         admin,
                         DevicePolicyManager.LOCK_TASK_FEATURE_HOME
                                 | DevicePolicyManager.LOCK_TASK_FEATURE_SYSTEM_INFO
+                                | DevicePolicyManager.LOCK_TASK_FEATURE_NOTIFICATIONS
                 );
             }
 
@@ -85,9 +88,10 @@ public final class KioskPolicyManager {
                     new ComponentName(context, MainActivity.class)
             );
 
-            // Status information remains visible; lock-task controls prevent shade access.
+            // Status information and approved app notifications remain visible.
             safeSetStatusBar(manager, admin, false);
             safeSetKeyguard(manager, admin, true);
+            grantRequiredRuntimePermissions(context, manager, admin);
             addRestrictions(manager, admin);
             safeSetApplicationHidden(manager, admin, SETTINGS_PACKAGE, true);
             blockCompanyAppUninstall(context, manager, admin, true);
@@ -244,6 +248,66 @@ public final class KioskPolicyManager {
     private static void addIfInstalled(Context context, Set<String> packages, String packageName) {
         if (isInstalled(context, packageName)) {
             packages.add(packageName);
+        }
+    }
+
+    private static void grantRequiredRuntimePermissions(
+            Context context,
+            DevicePolicyManager manager,
+            ComponentName admin
+    ) {
+        // The DPC can silently grant the kiosk camera permission. This lets the
+        // torch tile work after a signed in-place update without opening Settings.
+        safeGrantRuntimePermission(
+                context,
+                manager,
+                admin,
+                context.getPackageName(),
+                Manifest.permission.CAMERA
+        );
+
+        // Android 13+ requires POST_NOTIFICATIONS. Grant it to the approved work
+        // apps, while LOCK_TASK_FEATURE_NOTIFICATIONS allows their notifications
+        // to be shown during full lock-task kiosk mode.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            String[] notificationPackages = new String[] {
+                    WHATSAPP,
+                    WHATSAPP_BUSINESS,
+                    GUARD_PACKAGE,
+                    AppPrefs.getOdooPackage(context)
+            };
+            for (String packageName : notificationPackages) {
+                safeGrantRuntimePermission(
+                        context,
+                        manager,
+                        admin,
+                        packageName,
+                        Manifest.permission.POST_NOTIFICATIONS
+                );
+            }
+        }
+    }
+
+    private static void safeGrantRuntimePermission(
+            Context context,
+            DevicePolicyManager manager,
+            ComponentName admin,
+            String packageName,
+            String permission
+    ) {
+        if (!isInstalled(context, packageName)) {
+            return;
+        }
+        try {
+            manager.setPermissionGrantState(
+                    admin,
+                    packageName,
+                    permission,
+                    DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED
+            );
+        } catch (RuntimeException ignored) {
+            // Some OEM/app combinations do not expose every runtime permission
+            // to the DPC. The app remains usable and can request it normally.
         }
     }
 

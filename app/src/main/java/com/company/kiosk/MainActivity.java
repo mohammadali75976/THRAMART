@@ -5,9 +5,13 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -29,9 +33,33 @@ import java.util.Locale;
 public class MainActivity extends Activity {
     private static final int REQUEST_CAPTURE = 4102;
     private static final int REQUEST_CAMERA_STORAGE = 4103;
+    private static final int REQUEST_TORCH_CAMERA = 4104;
 
     private TextView statusView;
+    private Button torchButton;
     private Uri pendingCameraUri;
+    private CameraManager cameraManager;
+    private String torchCameraId;
+    private boolean torchOn;
+
+    private final CameraManager.TorchCallback torchCallback =
+            new CameraManager.TorchCallback() {
+                @Override
+                public void onTorchModeChanged(String cameraId, boolean enabled) {
+                    if (cameraId.equals(torchCameraId)) {
+                        torchOn = enabled;
+                        runOnUiThread(() -> updateTorchButton());
+                    }
+                }
+
+                @Override
+                public void onTorchModeUnavailable(String cameraId) {
+                    if (cameraId.equals(torchCameraId)) {
+                        torchOn = false;
+                        runOnUiThread(() -> updateTorchButton());
+                    }
+                }
+            };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,6 +73,7 @@ public class MainActivity extends Activity {
         Button phone = findViewById(R.id.btnPhone);
         Button guard = findViewById(R.id.btnWaGuard);
         Button camera = findViewById(R.id.btnCamera);
+        torchButton = findViewById(R.id.btnTorch);
         Button gallery = findViewById(R.id.btnGallery);
         Button calculator = findViewById(R.id.btnCalculator);
         Button portal = findViewById(R.id.btnPortal);
@@ -65,10 +94,12 @@ public class MainActivity extends Activity {
                 "WA View Once Guard"
         ));
         camera.setOnClickListener(v -> requestCameraOrOpen());
+        torchButton.setOnClickListener(v -> toggleTorch());
         gallery.setOnClickListener(v -> startActivity(new Intent(this, GalleryActivity.class)));
         calculator.setOnClickListener(v -> startActivity(new Intent(this, CalculatorActivity.class)));
         portal.setOnClickListener(v -> openCompanyUrl());
         admin.setOnClickListener(v -> showAdminPinDialog());
+        initializeTorch();
     }
 
     @Override
@@ -229,7 +260,104 @@ public class MainActivity extends Activity {
             } else {
                 Toast.makeText(this, "Camera storage permission required", Toast.LENGTH_LONG).show();
             }
+        } else if (requestCode == REQUEST_TORCH_CAMERA) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                toggleTorch();
+            } else {
+                Toast.makeText(this, "Torch ke liye camera permission required", Toast.LENGTH_LONG).show();
+            }
         }
+    }
+
+    private void initializeTorch() {
+        cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+        torchCameraId = findTorchCameraId();
+        if (cameraManager != null) {
+            try {
+                cameraManager.registerTorchCallback(torchCallback, null);
+            } catch (RuntimeException ignored) {
+            }
+        }
+        updateTorchButton();
+    }
+
+    private String findTorchCameraId() {
+        if (cameraManager == null) {
+            return null;
+        }
+        String fallback = null;
+        try {
+            for (String cameraId : cameraManager.getCameraIdList()) {
+                CameraCharacteristics characteristics =
+                        cameraManager.getCameraCharacteristics(cameraId);
+                Boolean flashAvailable = characteristics.get(
+                        CameraCharacteristics.FLASH_INFO_AVAILABLE
+                );
+                if (!Boolean.TRUE.equals(flashAvailable)) {
+                    continue;
+                }
+                if (fallback == null) {
+                    fallback = cameraId;
+                }
+                Integer lensFacing = characteristics.get(
+                        CameraCharacteristics.LENS_FACING
+                );
+                if (lensFacing != null
+                        && lensFacing == CameraCharacteristics.LENS_FACING_BACK) {
+                    return cameraId;
+                }
+            }
+        } catch (CameraAccessException | RuntimeException ignored) {
+        }
+        return fallback;
+    }
+
+    private void toggleTorch() {
+        if (cameraManager == null || torchCameraId == null) {
+            Toast.makeText(this, "Is phone mein torch available nahi", Toast.LENGTH_LONG).show();
+            return;
+        }
+        if (checkSelfPermission(Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(
+                    new String[]{Manifest.permission.CAMERA},
+                    REQUEST_TORCH_CAMERA
+            );
+            return;
+        }
+        try {
+            cameraManager.setTorchMode(torchCameraId, !torchOn);
+        } catch (CameraAccessException | SecurityException | IllegalArgumentException exception) {
+            Toast.makeText(
+                    this,
+                    "Torch start nahi hui: " + exception.getMessage(),
+                    Toast.LENGTH_LONG
+            ).show();
+        }
+    }
+
+    private void updateTorchButton() {
+        if (torchButton == null) {
+            return;
+        }
+        if (torchCameraId == null) {
+            torchButton.setText("TORCH: N/A");
+            torchButton.setEnabled(false);
+        } else {
+            torchButton.setEnabled(true);
+            torchButton.setText(torchOn ? "TORCH: ON" : "TORCH: OFF");
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (cameraManager != null) {
+            try {
+                cameraManager.unregisterTorchCallback(torchCallback);
+            } catch (RuntimeException ignored) {
+            }
+        }
+        super.onDestroy();
     }
 
     private void cleanupPendingCameraUri() {
