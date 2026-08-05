@@ -1,0 +1,100 @@
+name: 1 - First Signed Build - Save Key
+
+on:
+  workflow_dispatch:
+
+jobs:
+  first-signed-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.13"
+
+      - name: Create production signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          STORE_PASSWORD="$(openssl rand -hex 16)"
+          KEY_PASSWORD="$(openssl rand -hex 16)"
+          KEY_ALIAS="thramart"
+          KEYSTORE="$RUNNER_TEMP/thramart-release.jks"
+
+          echo "::add-mask::$STORE_PASSWORD"
+          echo "::add-mask::$KEY_PASSWORD"
+
+          keytool -genkeypair \
+            -keystore "$KEYSTORE" \
+            -storetype JKS \
+            -storepass "$STORE_PASSWORD" \
+            -keypass "$KEY_PASSWORD" \
+            -alias "$KEY_ALIAS" \
+            -keyalg RSA \
+            -keysize 4096 \
+            -validity 10000 \
+            -dname "CN=Thramart, OU=Company Kiosk, O=Thramart, L=Salalah, C=OM" \
+            -noprompt
+
+          {
+            echo "THRAMART_STORE_PASSWORD=$STORE_PASSWORD"
+            echo "THRAMART_KEY_ALIAS=$KEY_ALIAS"
+            echo "THRAMART_KEY_PASSWORD=$KEY_PASSWORD"
+          } > "$RUNNER_TEMP/THRAMART_SIGNING_DETAILS.txt"
+
+          base64 -w 0 "$KEYSTORE" > "$RUNNER_TEMP/THRAMART_KEYSTORE_BASE64.txt"
+
+          echo "THRAMART_KEYSTORE_PATH=$KEYSTORE" >> "$GITHUB_ENV"
+          echo "THRAMART_STORE_PASSWORD=$STORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "THRAMART_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "THRAMART_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Build signed APKs
+        run: gradle :app:assembleRelease :guard:assembleRelease
+
+      - name: Collect APK and signing files
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/thramart-first-build"
+
+          cp app/build/outputs/apk/release/app-release.apk \
+            "$RUNNER_TEMP/thramart-first-build/Thramart-Kiosk-v4-signed.apk"
+
+          cp guard/build/outputs/apk/release/guard-release.apk \
+            "$RUNNER_TEMP/thramart-first-build/Thramart-WA-Guard-v4-signed.apk"
+
+          cp "$THRAMART_KEYSTORE_PATH" \
+            "$RUNNER_TEMP/thramart-first-build/thramart-release.jks"
+
+          cp "$RUNNER_TEMP/THRAMART_SIGNING_DETAILS.txt" \
+            "$RUNNER_TEMP/thramart-first-build/"
+
+          cp "$RUNNER_TEMP/THRAMART_KEYSTORE_BASE64.txt" \
+            "$RUNNER_TEMP/thramart-first-build/"
+
+          echo "Keep all signing files private. Future APK updates must use this same key." \
+            > "$RUNNER_TEMP/thramart-first-build/KEEP_THESE_FILES_PRIVATE.txt"
+
+      - name: Upload APKs and signing backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: Thramart-v4-FIRST-BUILD-SAVE-ALL-FILES
+          path: ${{ runner.temp }}/thramart-first-build/
+          retention-days: 90
