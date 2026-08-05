@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Thramart WA View Once Guard</string>
+    <string name="service_name">Thramart WA View Once Guard</string>
+    <string name="service_description">Checks WhatsApp screen controls and places a touch-blocking accessibility overlay over the View Once control. It does not save or transmit chats or media.</string>
+</resources>

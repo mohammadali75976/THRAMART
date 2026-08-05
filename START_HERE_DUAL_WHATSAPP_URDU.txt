@@ -1,0 +1,68 @@
+THRAMART DUAL WHATSAPP KIOSK v4 - START HERE
+
+Is repository mein 2 Android apps hain:
+1) app/   = Thramart Kiosk (package com.company.kiosk)
+2) guard/ = Thramart WA View Once Guard (package com.company.waguard)
+
+Kiosk mein alag buttons:
+- WHATSAPP NORMAL       package com.whatsapp
+- WHATSAPP BUSINESS     package com.whatsapp.w4b
+- ODOO
+- PHONE
+- WA GUARD
+- CAMERA / GALLERY / CALCULATOR / THRAMART URL
+
+IMPORTANT BEFORE BUILD
+- GitHub repository PRIVATE rakhein.
+- First production build ke liye Actions workflow:
+  "1 - First Signed Build - Save Key"
+- Artifact ka naam:
+  "Thramart-v4-FIRST-BUILD-SAVE-ALL-FILES"
+- Is artifact ke tamam files download aur private backup karein:
+  * Thramart-Kiosk-v4-signed.apk
+  * Thramart-WA-Guard-v4-signed.apk
+  * thramart-release.jks
+  * THRAMART_SIGNING_DETAILS.txt
+  * THRAMART_KEYSTORE_BASE64.txt
+- Signing files kho gaye to future update installed APK ke upar nahi lagegi.
+
+PHONE PAR INSTALL ORDER - NO FACTORY RESET
+1. WhatsApp Normal, WhatsApp Business, Odoo aur Phone/Dialer pehle install/update karein.
+2. Google, Samsung, Odoo, Meet aur baqi Android accounts temporarily remove karein.
+3. Developer Options aur USB Debugging ON karein.
+4. PC par ADB verify karein:
+   cd /d C:\platform-tools
+   adb devices
+5. Dono signed APK install karein:
+   adb install "C:\Thramart-Install\Thramart-WA-Guard-v4-signed.apk"
+   adb install "C:\Thramart-Install\Thramart-Kiosk-v4-signed.apk"
+6. WA Guard open karein aur Accessibility enable/calibrate karein:
+   adb shell am start -n com.company.waguard/.MainActivity
+7. Final checks:
+   adb shell dpm list-owners
+   adb shell pm list users
+   adb shell dumpsys account | findstr /i /c:"Account {"
+   Expected: no owners, sirf User 0, account output blank.
+8. Device Owner set karein:
+   adb shell dpm set-device-owner com.company.kiosk/.KioskAdminReceiver
+9. Verify:
+   adb shell dpm list-owners
+10. Google/Odoo/WhatsApp accounts dobara add aur dono WhatsApp setup karein.
+11. Kiosk open karein:
+   adb shell am start -n com.company.kiosk/.MainActivity
+12. Admin PIN 2552 -> START / RE-APPLY KIOSK.
+13. Reboot:
+   adb reboot
+14. Dono WhatsApps, calls, battery/Wi-Fi icons aur Settings lock test karein.
+
+FUTURE UPDATE
+- Same source update karein.
+- GitHub repository secrets mein saved signing values set karein.
+- Workflow "2 - Future Signed Update" run karein.
+- Installed app ke upar update command:
+  adb install -r "PATH-TO-NEW-SIGNED-KIOSK.apk"
+
+PURANI GALTI DOBARA NA HO
+- Debug APK aur signed release APK mix na karein.
+- Kiosk Device Owner banne ke baad uninstall na karein.
+- Signing key public repo mein commit na karein.

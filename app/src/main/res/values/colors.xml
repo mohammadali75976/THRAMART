@@ -1,0 +1,9 @@
+<resources>
+    <color name="brand">#17324D</color>
+    <color name="brand_dark">#0E2235</color>
+    <color name="surface">#F4F6F8</color>
+    <color name="card">#FFFFFF</color>
+    <color name="danger">#B3261E</color>
+    <color name="text_primary">#17212B</color>
+    <color name="text_secondary">#5F6B76</color>
+</resources>

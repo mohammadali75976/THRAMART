@@ -1,0 +1,8 @@
+This is one complete GitHub repository:
+
+- app/   = Thramart Device Owner Kiosk
+- guard/ = Thramart WA View Once Guard
+- .github/workflows/1-first-signed-build.yml = first production build, creates and returns the signing key
+- .github/workflows/2-future-signed-update.yml = future updates using saved GitHub secrets
+
+The first workflow outputs both signed APKs in one artifact.
