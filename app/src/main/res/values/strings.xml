@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">Thramart Dual WhatsApp Kiosk</string>
-    <string name="device_admin_description">Thramart company-owned kiosk device policy controller.</string>
+    <string name="app_name">Thramart Kiosk Setup 2</string>
+    <string name="admin_description">Controls this dedicated shop phone in kiosk mode.</string>
 </resources>

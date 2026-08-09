@@ -1,94 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
-
-    <uses-feature android:name="android.hardware.telephony" android:required="false" />
-    <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
-
-    <queries>
-        <package android:name="com.whatsapp" />
-        <package android:name="com.whatsapp.w4b" />
-        <package android:name="com.odoo.mobile" />
-        <package android:name="com.company.waguard" />
-        <package android:name="com.samsung.android.dialer" />
-        <package android:name="com.samsung.android.incallui" />
-        <package android:name="com.samsung.android.contacts" />
-        <package android:name="com.google.android.dialer" />
-        <package android:name="com.android.dialer" />
-        <package android:name="com.android.contacts" />
-        <package android:name="com.android.server.telecom" />
-        <package android:name="com.android.phone" />
-        <intent>
-            <action android:name="android.media.action.IMAGE_CAPTURE" />
-        </intent>
-        <intent>
-            <action android:name="android.intent.action.DIAL" />
-            <data android:scheme="tel" />
-        </intent>
-        <intent>
-            <action android:name="android.intent.action.MAIN" />
-            <category android:name="android.intent.category.HOME" />
-        </intent>
-    </queries>
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED" />
 
     <application
         android:allowBackup="false"
-        android:icon="@drawable/ic_launcher"
-        android:label="@string/app_name"
-        android:supportsRtl="true"
+        android:label="Thramart Kiosk Setup 2"
         android:theme="@style/AppTheme"
-        android:usesCleartextTraffic="true">
+        android:supportsRtl="true">
+
+        <activity
+            android:name=".AdminActivity"
+            android:exported="false" />
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:screenOrientation="portrait"
-            android:launchMode="singleTask">
+            android:launchMode="singleTask"
+            android:lockTaskMode="if_whitelisted">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
         </activity>
-
-        <activity android:name=".AdminActivity" android:exported="false" android:screenOrientation="portrait" />
-        <activity android:name=".WebActivity" android:exported="false" android:screenOrientation="portrait" />
-        <activity android:name=".CalculatorActivity" android:exported="false" android:screenOrientation="portrait" />
-        <activity android:name=".GalleryActivity" android:exported="false" android:screenOrientation="portrait" />
-        <activity android:name=".ImageViewerActivity" android:exported="false" android:screenOrientation="portrait" />
 
         <receiver
             android:name=".KioskAdminReceiver"
-            android:description="@string/device_admin_description"
+            android:description="@string/admin_description"
             android:exported="true"
-            android:label="@string/app_name"
+            android:label="Thramart Kiosk Device Admin"
             android:permission="android.permission.BIND_DEVICE_ADMIN">
             <meta-data
                 android:name="android.app.device_admin"
                 android:resource="@xml/device_admin_receiver" />
             <intent-filter>
                 <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
-                <action android:name="android.app.action.PROFILE_PROVISIONING_COMPLETE" />
             </intent-filter>
         </receiver>
 
         <receiver
             android:name=".BootReceiver"
             android:enabled="true"
-            android:exported="false">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+
+        <service
+            android:name=".EnforcementService"
+            android:exported="false"
+            android:foregroundServiceType="systemExempted" />
     </application>
 </manifest>

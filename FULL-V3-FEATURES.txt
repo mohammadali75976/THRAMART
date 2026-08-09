@@ -1,0 +1,16 @@
+THRAMART KIOSK SETUP 2 - FULL V3
+
+Included:
+1. Center Android Home button visible in lock-task kiosk mode.
+2. Wi-Fi / mobile signal / battery / time system info visible.
+3. Recents and notification shade are NOT enabled.
+4. Text and button sizing adjusted so labels can wrap instead of being cut.
+5. Deep Settings remains hidden behind 7 taps on THRAMART • SETUP 2 and the Admin PIN.
+6. Deep Settings includes EXIT KIOSK / REMOVE DEVICE OWNER.
+   - Requires the current Admin PIN again.
+   - Removes this app as Device Owner and clears the kiosk policies applied by this project.
+   - Does not uninstall user apps.
+
+IMPORTANT:
+The currently installed Setup 2 debug APK can only be updated by an APK signed with the same signing certificate.
+Do not uninstall a Device Owner app before ownership has been removed.
