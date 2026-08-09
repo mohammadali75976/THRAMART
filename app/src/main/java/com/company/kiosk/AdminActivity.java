@@ -1,6 +1,8 @@
 package com.company.kiosk;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.admin.DevicePolicyManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.webkit.URLUtil;
@@ -27,6 +29,7 @@ public class AdminActivity extends Activity {
         Button save = findViewById(R.id.btnSave);
         Button startKiosk = findViewById(R.id.btnStartKiosk);
         Button exitKiosk = findViewById(R.id.btnExitKiosk);
+        Button releaseOwner = findViewById(R.id.btnReleaseOwner);
         Button back = findViewById(R.id.btnBack);
 
         urlInput.setText(AppPrefs.getUrl(this));
@@ -36,6 +39,7 @@ public class AdminActivity extends Activity {
         save.setOnClickListener(v -> saveSettings(true));
         startKiosk.setOnClickListener(v -> startOrReapplyKiosk());
         exitKiosk.setOnClickListener(v -> exitKiosk());
+        releaseOwner.setOnClickListener(v -> confirmReleaseDeviceOwner());
         back.setOnClickListener(v -> finish());
 
         refreshStatus();
@@ -122,6 +126,57 @@ public class AdminActivity extends Activity {
         String result = KioskPolicyManager.applyPolicies(this);
         Toast.makeText(this, result, Toast.LENGTH_LONG).show();
         finish();
+    }
+
+    private void confirmReleaseDeviceOwner() {
+        if (!KioskPolicyManager.isDeviceOwner(this)) {
+            Toast.makeText(this, "Device Owner already removed", Toast.LENGTH_LONG).show();
+            refreshStatus();
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("REMOVE DEVICE OWNER")
+                .setMessage(
+                        "Use this only to move this phone from the old Thramart kiosk to Setup 2. "
+                                + "Kiosk restrictions will be cleared first, then the old Device Owner will be released."
+                )
+                .setNegativeButton("CANCEL", null)
+                .setPositiveButton("REMOVE", (dialog, which) -> releaseDeviceOwner())
+                .show();
+    }
+
+    @SuppressWarnings("deprecation")
+    private void releaseDeviceOwner() {
+        if (!KioskPolicyManager.isDeviceOwner(this)) {
+            Toast.makeText(this, "Device Owner already removed", Toast.LENGTH_LONG).show();
+            refreshStatus();
+            return;
+        }
+
+        KioskPolicyManager.disableKiosk(this);
+        DevicePolicyManager manager = KioskPolicyManager.dpm(this);
+        if (manager == null) {
+            Toast.makeText(this, "DevicePolicyManager available nahi", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        try {
+            manager.clearDeviceOwnerApp(getPackageName());
+            AppPrefs.setKioskEnabled(this, false);
+            Toast.makeText(
+                    this,
+                    "Old Device Owner removed. Ab ADB se dpm list-owners check karein.",
+                    Toast.LENGTH_LONG
+            ).show();
+            refreshStatus();
+        } catch (SecurityException | IllegalArgumentException exception) {
+            Toast.makeText(
+                    this,
+                    "Device Owner remove error: " + exception.getMessage(),
+                    Toast.LENGTH_LONG
+            ).show();
+        }
     }
 
     private void exitKiosk() {

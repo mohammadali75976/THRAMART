@@ -105,6 +105,16 @@
             android:textStyle="bold" />
 
         <Button
+            android:id="@+id/btnReleaseOwner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/button_danger"
+            android:text="SWITCH TO SETUP 2 - REMOVE DEVICE OWNER"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold" />
+
+        <Button
             android:id="@+id/btnBack"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
