@@ -83,3 +83,9 @@ You can either:
 - Deep Settings now has **EXIT KIOSK / REMOVE DEVICE OWNER** with current-PIN confirmation.
 
 > Note: `DevicePolicyManager.clearDeviceOwnerApp()` is intended for testing/recovery use and Android describes cleanup as best-effort. This project explicitly clears the kiosk policies it applies before releasing ownership.
+
+## V4 launch/schedule fix
+- Allows selected apps to launch normally before Device Owner provisioning, which makes fresh-phone testing possible.
+- Uses lock-task ActivityOptions only when this app is Device Owner and the target app is lock-task permitted.
+- Separates launch failures into clear messages: not allowed, outside schedule, not installed/no launcher, or launch failed.
+- Keeps the existing schedule behavior, Home/system-info lock-task features, and Exit Kiosk / Remove Device Owner recovery option.

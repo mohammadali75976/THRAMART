@@ -133,11 +133,19 @@ class MainActivity : Activity() {
                 maxLines = 3
                 setPadding(dp(12), dp(10), dp(12), dp(10))
                 setOnClickListener {
-                    if (!KioskPolicy.launchAllowedApp(this@MainActivity, rule.packageName)) {
-                        Toast.makeText(
-                            this@MainActivity,
-                            "App is closed by schedule or not installed",
-                            Toast.LENGTH_SHORT
+                    when (KioskPolicy.launchAllowedApp(this@MainActivity, rule.packageName)) {
+                        KioskPolicy.LaunchResult.OPENED -> Unit
+                        KioskPolicy.LaunchResult.NOT_ALLOWED -> Toast.makeText(
+                            this@MainActivity, "App is not allowed", Toast.LENGTH_SHORT
+                        ).show()
+                        KioskPolicy.LaunchResult.OUTSIDE_SCHEDULE -> Toast.makeText(
+                            this@MainActivity, "App is closed by scheduled time", Toast.LENGTH_SHORT
+                        ).show()
+                        KioskPolicy.LaunchResult.NOT_INSTALLED -> Toast.makeText(
+                            this@MainActivity, "App is not installed or has no launcher", Toast.LENGTH_SHORT
+                        ).show()
+                        KioskPolicy.LaunchResult.FAILED -> Toast.makeText(
+                            this@MainActivity, "App could not be opened", Toast.LENGTH_SHORT
                         ).show()
                     }
                 }

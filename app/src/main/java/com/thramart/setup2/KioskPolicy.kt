@@ -12,6 +12,14 @@ import android.os.UserManager
 import java.util.Calendar
 
 object KioskPolicy {
+    enum class LaunchResult {
+        OPENED,
+        NOT_ALLOWED,
+        OUTSIDE_SCHEDULE,
+        NOT_INSTALLED,
+        FAILED
+    }
+
     fun admin(context: Context) = ComponentName(context, KioskAdminReceiver::class.java)
 
     fun dpm(context: Context) =
@@ -47,7 +55,6 @@ object KioskPolicy {
             )
         }
 
-        // Make this app the permanent HOME launcher on the managed device.
         val filter = IntentFilter(Intent.ACTION_MAIN).apply {
             addCategory(Intent.CATEGORY_HOME)
             addCategory(Intent.CATEGORY_DEFAULT)
@@ -89,7 +96,6 @@ object KioskPolicy {
 
         if (!manager.isDeviceOwnerApp(activity.packageName)) return true
 
-        // Best-effort cleanup of the policies this kiosk applies before releasing ownership.
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 manager.setLockTaskFeatures(admin, DevicePolicyManager.LOCK_TASK_FEATURE_NONE)
@@ -110,20 +116,32 @@ object KioskPolicy {
         }
     }
 
-    fun launchAllowedApp(context: Context, packageName: String): Boolean {
-        if (!currentAllowedPackages(context).contains(packageName)) return false
-        val intent = context.packageManager.getLaunchIntentForPackage(packageName) ?: return false
+    fun launchAllowedApp(context: Context, packageName: String): LaunchResult {
+        val rule = RuleStore.loadRules(context).firstOrNull { it.packageName == packageName }
+            ?: return LaunchResult.NOT_ALLOWED
+
+        if (!rule.enabled) return LaunchResult.NOT_ALLOWED
+        if (!rule.isAllowedNow(nowMinutes())) return LaunchResult.OUTSIDE_SCHEDULE
+
+        val intent = context.packageManager.getLaunchIntentForPackage(packageName)
+            ?: return LaunchResult.NOT_INSTALLED
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
         return try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val useLockedLaunch =
+                isDeviceOwner(context) && dpm(context).isLockTaskPermitted(packageName)
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && useLockedLaunch) {
                 val options = ActivityOptions.makeBasic().apply { setLockTaskEnabled(true) }
                 context.startActivity(intent, options.toBundle())
             } else {
+                // Normal launch is intentionally supported before Device Owner provisioning
+                // so an admin can test selected apps on a fresh phone.
                 context.startActivity(intent)
             }
-            true
+            LaunchResult.OPENED
         } catch (_: Exception) {
-            false
+            LaunchResult.FAILED
         }
     }
 }
